@@ -208,10 +208,10 @@ routerItem.get("/user/posts", authenticateFirebaseUser, async (req, res) => {
   }
 });
 
-// Claim an item
-routerItem.patch("/:id/claim", authenticateFirebaseUser, async (req, res) => {
+
+// Get items claimed by the logged-in user
+routerItem.get("/user/claims", authenticateFirebaseUser, async (req, res) => {
   try {
-    const { id } = req.params;
     const { email } = req.user;
     
     // Find the user
@@ -220,35 +220,20 @@ routerItem.patch("/:id/claim", authenticateFirebaseUser, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Find the item
-    const item = await Item.findById(id);
-    if (!item) {
-      return res.status(404).json({ message: "Item not found" });
-    }
-    
-    // Check if item is already claimed
-    if (item.status === "claimed") {
-      return res.status(400).json({ message: "Item has already been claimed" });
-    }
-    
-    // Update item status
-    item.status = "claimed";
-    item.claimedBy = user._id;
-    item.claimedWhen = new Date();
-    await item.save();
-    
-    // Add the item to user's claimed items
-    user.claimedItems.push(item._id);
-    await user.save();
+    // Find items claimed by the user
+    const items = await Item.find({ claimedBy: user._id })
+      .sort({ createdAt: -1 });
     
     return res.status(200).json({
-      message: "Item claimed successfully",
-      item
+      message: "User claimed items retrieved successfully",
+      items
     });
   } catch (err) {
-    console.error("Error claiming item:", err);
+    console.error("Error fetching user items:", err);
     return res.status(500).json({ message: "Server error" });
   }
 });
+
+
 
 export default routerItem;
