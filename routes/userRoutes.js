@@ -19,7 +19,7 @@ routerUser.post("/login", authenticateFirebaseUser, async (req, res) => {
         }
         return res.status(200).json({
             message: "Logged in successfully",
-            user: { uid: user.uid, email: user.email, name: user.name },
+            user,
         });
     } catch (err) {
         console.error("Error logging in user:", err);
