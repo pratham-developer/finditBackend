@@ -2,7 +2,6 @@ import express from "express";
 import authenticateFirebaseUser from "../middleware/googleAuth.js";
 import { Item } from "../models/item.js";
 import { User } from "../models/user.js";
-import { ClaimRequest } from "../models/claim.js";
 import { generateClaimToken, verifyClaimToken } from "../utils/qrCodeGenerator.js";
 import QRCode from "qrcode";
 
@@ -142,7 +141,7 @@ routerClaim.post("/claim-item", authenticateFirebaseUser, async (req, res) => {
 });
 
 // 3. Get claimable status of an item (to check if it's still available)
-routerClaim.get("/status/:itemId", async (req, res) => {
+routerClaim.get("/status/:itemId", authenticateFirebaseUser, async (req, res) => {
   try {
     const { itemId } = req.params;
     

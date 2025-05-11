@@ -110,7 +110,7 @@ routerItem.post("/", authenticateFirebaseUser, upload.single("image"), async (re
 });
 
 // Get all items with pagination and filters
-routerItem.get("/", async (req, res) => {
+routerItem.get("/", authenticateFirebaseUser, async (req, res) => {
   try {
     const { 
       page = 1, 
@@ -161,7 +161,7 @@ routerItem.get("/", async (req, res) => {
 });
 
 // Get an item by ID
-routerItem.get("/:id", async (req, res) => {
+routerItem.get("/:id", authenticateFirebaseUser, async (req, res) => {
   try {
     const { id } = req.params;
     
