@@ -75,7 +75,7 @@ routerClaim.post("/generate-qr/:itemId", authenticateFirebaseUser, async (req, r
 // 2. Verify QR code and claim the item (claimer action)
 routerClaim.post("/claim-item", authenticateFirebaseUser, async (req, res) => {
   try {
-    const { token } = req.body;
+    const { token, itemId } = req.body;
     const { email } = req.user;
     
     // Find the claimer
@@ -89,9 +89,13 @@ routerClaim.post("/claim-item", authenticateFirebaseUser, async (req, res) => {
     if (!decodedToken) {
       return res.status(400).json({ message: "Invalid or expired QR code" });
     }
+    // Ensure the itemId in the request matches the one in the token
+    if (decodedToken.itemId !== itemId) {
+      return res.status(400).json({ message: "Token does not match the item" });
+    }
     
     // Find the item
-    const item = await Item.findById(decodedToken.itemId);
+    const item = await Item.findById(itemId);
     if (!item) {
       return res.status(404).json({ message: "Item not found" });
     }
