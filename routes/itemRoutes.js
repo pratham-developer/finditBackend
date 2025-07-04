@@ -194,8 +194,10 @@ routerItem.get("/user/posts", authenticateFirebaseUser, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Find items posted by the user
+    // Find items posted by the user, populate postedBy and claimedBy
     const items = await Item.find({ postedBy: user._id })
+      .populate("postedBy", "name regNo email")
+      .populate("claimedBy", "name regNo email")
       .sort({ createdAt: -1 });
     
     return res.status(200).json({
@@ -208,7 +210,6 @@ routerItem.get("/user/posts", authenticateFirebaseUser, async (req, res) => {
   }
 });
 
-
 // Get items claimed by the logged-in user
 routerItem.get("/user/claims", authenticateFirebaseUser, async (req, res) => {
   try {
@@ -220,8 +221,10 @@ routerItem.get("/user/claims", authenticateFirebaseUser, async (req, res) => {
       return res.status(404).json({ message: "User not found" });
     }
     
-    // Find items claimed by the user
+    // Find items claimed by the user, populate postedBy and claimedBy
     const items = await Item.find({ claimedBy: user._id })
+      .populate("postedBy", "name regNo email")
+      .populate("claimedBy", "name regNo email")
       .sort({ createdAt: -1 });
     
     return res.status(200).json({
@@ -233,7 +236,5 @@ routerItem.get("/user/claims", authenticateFirebaseUser, async (req, res) => {
     return res.status(500).json({ message: "Server error" });
   }
 });
-
-
 
 export default routerItem;
