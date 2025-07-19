@@ -4,35 +4,11 @@ import { Item } from "../models/item.js";
 import { User } from "../models/user.js";
 import { generateClaimToken, verifyClaimToken } from "../utils/qrCodeGenerator.js";
 import QRCode from "qrcode";
-import rateLimit from "express-rate-limit";
 
 const routerClaim = express.Router();
 
-// Rate limiters for claim routes
-const claimQrLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 10,
-  message: { message: "Too many QR generations, please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-const claimItemLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 10,
-  message: { message: "Too many claim attempts, please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-const claimStatusLimiter = rateLimit({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 30,
-  message: { message: "Too many status checks, please try again later." },
-  standardHeaders: true,
-  legacyHeaders: false,
-});
-
 // 1. Generate QR code for a specific item (owner action)
-routerClaim.post("/generate-qr/:itemId", authenticateFirebaseUser, claimQrLimiter, async (req, res) => {
+routerClaim.post("/generate-qr/:itemId", authenticateFirebaseUser, async (req, res) => {
   try {
     const { itemId } = req.params;
     const { email } = req.user;
@@ -97,7 +73,7 @@ routerClaim.post("/generate-qr/:itemId", authenticateFirebaseUser, claimQrLimite
 });
 
 // 2. Verify QR code and claim the item (claimer action)
-routerClaim.post("/claim-item", authenticateFirebaseUser, claimItemLimiter, async (req, res) => {
+routerClaim.post("/claim-item", authenticateFirebaseUser, async (req, res) => {
   try {
     const { token, itemId } = req.body;
     const { email } = req.user;
@@ -169,7 +145,7 @@ routerClaim.post("/claim-item", authenticateFirebaseUser, claimItemLimiter, asyn
 });
 
 // 3. Get claimable status of an item (to check if it's still available)
-routerClaim.get("/status/:itemId", authenticateFirebaseUser, claimStatusLimiter, async (req, res) => {
+routerClaim.get("/status/:itemId", authenticateFirebaseUser, async (req, res) => {
   try {
     const { itemId } = req.params;
     

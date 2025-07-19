@@ -15,9 +15,9 @@ router.get('/version', (req, res) => {
     }
     try {
       const versionData = JSON.parse(data);
-      res.json(versionData);
+      return res.json({ message: "Server Working", ...versionData });
     } catch (parseErr) {
-      res.status(500).json({ error: 'Invalid version file format' });
+      return res.status(500).json({ error: 'Invalid version file format' });
     }
   });
 });
@@ -33,7 +33,7 @@ router.post('/admin/version', authenticateFirebaseUser, adminOnly, (req, res) =>
     if (err) {
       return res.status(500).json({ error: 'Could not update version file' });
     }
-    res.json({ message: 'Version updated successfully', version: newVersion });
+    return res.json({ message: 'Version updated successfully', version: newVersion });
   });
 });
 

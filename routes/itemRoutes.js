@@ -215,6 +215,59 @@ routerItem.get("/:id", authenticateFirebaseUser, async (req, res) => {
   }
 });
 
+const deleteItemLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000, // 5 minutes
+  max: 10,
+  message: { message: "Too many delete requests, please try again later." },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+routerItem.delete("/:itemId", authenticateFirebaseUser, deleteItemLimiter, async (req, res) => {
+  const { itemId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(itemId)) {
+    return res.status(400).json({ message: "Invalid item ID format." });
+  }
+  try {
+    const item = await Item.findById(itemId);
+    if (!item) {
+      return res.status(404).json({ message: "Item not found." });
+    }
+    if (item.status === 'claimed') {
+      return res.status(400).json({ message: "Item is already claimed and cannot be deleted." });
+    }
+    const uploader = await User.findById(item.postedBy);
+    if (!uploader || req.user.email !== uploader.email) {
+      return res.status(403).json({ message: "You don't have access to delete this item." });
+    }
+
+    // Delete the item
+    await Item.findByIdAndDelete(itemId);
+
+    // Remove item from all users' registeredItems and claimedItems
+    await User.updateMany(
+      { $or: [
+        { registeredItems: itemId },
+        { claimedItems: itemId }
+      ]},
+      {
+        $pull: {
+          registeredItems: itemId,
+          claimedItems: itemId
+        }
+      }
+    );
+    // Cascade delete placeholder (uncomment and adjust as needed)
+    // await Comment.deleteMany({ itemId });
+    // await Notification.deleteMany({ itemId });
+    // Logging
+    console.log(`[ADMIN DELETE] Item ${itemId} deleted by ${req.user.email} at ${new Date().toISOString()}`);
+    return res.status(200).json({ message: "Item deleted and references removed." });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error." });
+  }
+});
+
 // Get items posted by the logged-in user
 routerItem.get("/user/posts", authenticateFirebaseUser, async (req, res) => {
   try {
@@ -269,6 +322,7 @@ routerItem.get("/user/claims", authenticateFirebaseUser, async (req, res) => {
   }
 });
 
+// Delete an item by ID (admin only)
 routerItem.delete("/admin/:itemId", authenticateFirebaseUser, adminOnly, adminLimiter, async (req, res) => {
   const { itemId } = req.params;
   if (!mongoose.Types.ObjectId.isValid(itemId)) {

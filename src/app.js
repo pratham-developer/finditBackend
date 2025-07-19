@@ -17,6 +17,7 @@ import helmet from "helmet";
 dotenv.config();
 
 const app = express();
+app.set('trust proxy', 1);
 
 if (process.env.NODE_ENV === "production") {
   app.use(morgan("combined"));
@@ -58,7 +59,7 @@ app.use("/user/login", loginLimiter);
 // Other POST routes: 5 requests per 15 minutes per IP
 const postLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 5,
+  max: 15,
   message: {
     message: "Too many POST requests from this IP, please try again after 15 minutes."
   },
