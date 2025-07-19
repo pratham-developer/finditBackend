@@ -4,9 +4,12 @@ import { Item } from "../models/item.js";
 import { User } from "../models/user.js";
 import multer from "multer";
 import cloudinary from "../config/cloudinary.js";
-
+import { nsfwCheckMiddleware } from '../middleware/nsfwCheck.js';
 import fs from "fs";
 import path from "path";
+import { adminOnly } from "../middleware/adminOnly.js";
+import rateLimit from "express-rate-limit";
+import mongoose from "mongoose";
 
 const routerItem = express.Router();
 
@@ -30,16 +33,22 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024, // 5MB max size
   },
   fileFilter: function (req, file, cb) {
-    // Accept only image files
-    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+    // Accept only image files (case-insensitive)
+    if (!file.originalname.match(/\.(jpg|jpeg|png)$/i)) {
       return cb(new Error('Only image files are allowed!'), false);
     }
     cb(null, true);
   }
 });
 
+const adminLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 60,
+  message: { message: "Too many admin actions, please try again later." }
+});
+
 // Create a new item
-routerItem.post("/", authenticateFirebaseUser, upload.single("image"), async (req, res) => {
+routerItem.post("/", authenticateFirebaseUser, upload.single("image"), nsfwCheckMiddleware, async (req, res) => {
   try {
     const { title, description, contact, category, location, dateFound } = req.body;
     const { email } = req.user;
@@ -104,9 +113,32 @@ routerItem.post("/", authenticateFirebaseUser, upload.single("image"), async (re
       item: newItem 
     });
   } catch (err) {
-    console.error("Error posting item:", err);
-    return res.status(500).json({ message: "Server error" });
+    // Log the error for debugging
+    console.error('Item creation error:', err);
+
+    // Handle known errors
+    if (err.message && err.message.includes('Cloudinary')) {
+      return res.status(400).json({ message: 'Image upload failed. Please try again.' });
+    }
+    if (err.message && err.message.includes('User not found')) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+    // Add more specific error checks as needed
+
+    // Fallback: generic error
+    return res.status(400).json({ message: 'Item creation failed. Please check your input and try again.' });
   }
+});
+
+// Multer error handler for /item route
+routerItem.use((err, req, res, next) => {
+  if (err && err.message === 'Only image files are allowed!') {
+    return res.status(400).json({ message: err.message });
+  }
+  if (err && err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ message: 'File too large. Max 5MB allowed.' });
+  }
+  next(err); // Pass to global handler if not a Multer error
 });
 
 // Get all items with pagination and filters
@@ -155,7 +187,7 @@ routerItem.get("/", authenticateFirebaseUser, async (req, res) => {
       total
     });
   } catch (err) {
-    console.error("Error fetching items:", err);
+    // Removed detailed error log for security
     return res.status(500).json({ message: "Server error" });
   }
 });
@@ -178,7 +210,7 @@ routerItem.get("/:id", authenticateFirebaseUser, async (req, res) => {
       item
     });
   } catch (err) {
-    console.error("Error fetching item:", err);
+    // Removed detailed error log for security
     return res.status(500).json({ message: "Server error" });
   }
 });
@@ -205,7 +237,7 @@ routerItem.get("/user/posts", authenticateFirebaseUser, async (req, res) => {
       items
     });
   } catch (err) {
-    console.error("Error fetching user items:", err);
+    // Removed detailed error log for security
     return res.status(500).json({ message: "Server error" });
   }
 });
@@ -232,8 +264,42 @@ routerItem.get("/user/claims", authenticateFirebaseUser, async (req, res) => {
       items
     });
   } catch (err) {
-    console.error("Error fetching user items:", err);
+    // Removed detailed error log for security
     return res.status(500).json({ message: "Server error" });
+  }
+});
+
+routerItem.delete("/admin/:itemId", authenticateFirebaseUser, adminOnly, adminLimiter, async (req, res) => {
+  const { itemId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(itemId)) {
+    return res.status(400).json({ message: "Invalid item ID format." });
+  }
+  try {
+    const deletedItem = await Item.findByIdAndDelete(itemId);
+    if (!deletedItem) {
+      return res.status(404).json({ message: "Item not found." });
+    }
+    // Remove item from all users' registeredItems and claimedItems
+    await User.updateMany(
+      { $or: [
+        { registeredItems: itemId },
+        { claimedItems: itemId }
+      ]},
+      {
+        $pull: {
+          registeredItems: itemId,
+          claimedItems: itemId
+        }
+      }
+    );
+    // Cascade delete placeholder (uncomment and adjust as needed)
+    // await Comment.deleteMany({ itemId });
+    // await Notification.deleteMany({ itemId });
+    // Logging
+    console.log(`[ADMIN DELETE] Item ${itemId} deleted by ${req.user.email} at ${new Date().toISOString()}`);
+    return res.status(200).json({ message: "Item deleted and references removed." });
+  } catch (err) {
+    return res.status(500).json({ message: "Server error." });
   }
 });
 

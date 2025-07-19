@@ -6,9 +6,9 @@ export const cleanupTemp = (err, req, res, next) => {
   if (req.file) {
     try {
       fs.unlinkSync(req.file.path);
-      console.log(`Temporary file ${req.file.path} deleted due to error`);
+      // Removed detailed log for security
     } catch (unlinkError) {
-      console.error("Error cleaning up temporary file:", unlinkError);
+      // Removed detailed error log for security
     }
   }
   next(err);

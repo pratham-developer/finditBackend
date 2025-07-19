@@ -23,7 +23,7 @@ export const verifyClaimToken = (token) => {
     // Verify the token and return the decoded payload
     return jwt.verify(token, process.env.JWT_SECRET);
   } catch (error) {
-    console.error("Token verification failed:", error);
+    // Removed detailed error log for security
     return null;
   }
 };

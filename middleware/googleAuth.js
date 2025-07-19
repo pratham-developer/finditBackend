@@ -13,7 +13,6 @@ const authenticateFirebaseUser = async (req, res, next) => {
         if(!email.endsWith('@vitstudent.ac.in')){
             return res.status(401).json({ message: "use Vit student email" });
         }
-        console.log(token)
         const name = decodedToken.name;
         const regIndex = name.lastIndexOf(" ");
         const firstName = name.slice(0, regIndex);
@@ -23,7 +22,7 @@ const authenticateFirebaseUser = async (req, res, next) => {
         req.user = decodedToken;
         next();
     } catch (err) {
-        console.error("Firebase Authentication Error:", err);
+        // Removed detailed error log for security
         return res.status(401).json({ message: "Unauthorized" });
     }
 };

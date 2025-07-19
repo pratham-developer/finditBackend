@@ -1,6 +1,7 @@
 import express from "express";
 import authenticateFirebaseUser from "../middleware/googleAuth.js";
 import { User } from "../models/user.js";
+import { adminOnly } from "../middleware/adminOnly.js";
 
 const routerUser = express.Router();
 
@@ -22,7 +23,7 @@ routerUser.post("/login", authenticateFirebaseUser, async (req, res) => {
             user,
         });
     } catch (err) {
-        console.error("Error logging in user:", err);
+        // Removed detailed error log for security
         res.status(500).json({ message: "Internal server error" });
     }
 });
@@ -41,9 +42,14 @@ routerUser.get("/", authenticateFirebaseUser, async (req, res) => {
         }
         return res.status(200).json({ message: "User retrieved successfully", user });
     } catch (err) {
-        console.error("Error fetching user", err);
+        // Removed detailed error log for security
         return res.status(500).json({ message: "Server error" });
     }
+});
+
+// Example admin-only route
+routerUser.get("/admin/test", authenticateFirebaseUser, adminOnly, (req, res) => {
+    res.status(200).json({ message: "Welcome, admin!" });
 });
 
 export default routerUser;
