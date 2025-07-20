@@ -3,8 +3,8 @@ import path from 'path';
 import os from 'os';
 
 const nsfwServicePath = path.resolve('nsfwDetection/nsfwService.cjs');
-const WORKER_COUNT = os.cpus().length; // Use number of CPU cores
-const WORKER_TIMEOUT = 5000; // 5 seconds per request
+const WORKER_COUNT = Math.max(1, os.cpus().length - 1); // Leave 1 core free
+const WORKER_TIMEOUT = 15000; // 5 seconds per request
 
 let workers = [];
 let readyWorkers = new Set();
