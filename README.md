@@ -1,4 +1,8 @@
+<div align="center">
+
 # <img src="https://img.icons8.com/color/48/000000/search--v1.png" width="36" style="vertical-align:middle;"/> FindIt – Lost & Found App for VIT
+
+</div>
 
 <p align="center">
   <img src="https://img.shields.io/badge/Institute-VIT%20Vellore-blueviolet" alt="Institute"/>
